@@ -27,6 +27,7 @@ class QueryNswDepartures(object):
         self.api_base_url = 'https://api.transport.nsw.gov.au/v1/tp/'
         self.api_call = 'departure_mon'
         self.stopid = '200064'  # By default queries the bustop at central
+        self.stop_name = ''
         self.params = {
             'outputFormat': 'rapidJSON',
             'coordOutputFormat': 'EPSG:4326',
@@ -59,12 +60,15 @@ class QueryNswDepartures(object):
                                 headers=self.headers)
 
         data = response.json()
-        #Timezone calculations
+
+        # Get the stop name
+        self.stop_name = data.get('locations')[0].get('name', '')
+
+        # Timezone calculations
         utc_tz = tz.tzutc()
-        local_tz = tz.tzlocal()
 
         for event in data['stopEvents']:
-            # Try to get the estimated departure time and if it is 
+            # Try to get the estimated departure time and if it is
             # not present, then get the planned departure time
             dpt = event.get('departureTimeEstimated', event.get('departureTimePlanned'))
             dpt_utc = dt.datetime.strptime(dpt, '%Y-%m-%dT%H:%M:%SZ')
@@ -75,6 +79,7 @@ class QueryNswDepartures(object):
     def query(self):
         self.query_departures()
 
+        print(f'Stop: {self.stopid} - {self.stop_name}')
         for k, v in self.departures.items():
             print(f"{k}: {v}")
 
