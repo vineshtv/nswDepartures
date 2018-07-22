@@ -1,9 +1,7 @@
 import sys
 import os
 import requests
-import json
 import datetime as dt
-import pprint
 from dateutil import tz
 import pytz
 from collections import defaultdict
@@ -55,26 +53,33 @@ class QueryNswDepartures(object):
 
     def query_departures(self):
         self.params['name_dm'] = self.stopid
-        response = requests.get(f'{self.api_base_url}{self.api_call}',
-                                params=self.params,
-                                headers=self.headers)
+        try:
+            response = requests.get(f'{self.api_base_url}{self.api_call}',
+                                    params=self.params,
+                                    headers=self.headers)
+        except requests.exceptions.RequestException as e:
+            print(e)
+            sys.exit(1)
 
-        data = response.json()
+        if response.status_code == 200:
+            data = response.json()
 
-        # Get the stop name
-        self.stop_name = data.get('locations')[0].get('name', '')
+            # Get the stop name
+            self.stop_name = data.get('locations')[0].get('name', '')
 
-        # Timezone calculations
-        utc_tz = tz.tzutc()
+            # Timezone calculations
+            utc_tz = tz.tzutc()
 
-        for event in data['stopEvents']:
-            # Try to get the estimated departure time and if it is
-            # not present, then get the planned departure time
-            dpt = event.get('departureTimeEstimated', event.get('departureTimePlanned'))
-            dpt_utc = dt.datetime.strptime(dpt, '%Y-%m-%dT%H:%M:%SZ')
-            transport = event.get('transportation')
-            diff = round((dpt_utc.replace(tzinfo=utc_tz) - dt.datetime.now(pytz.utc)).total_seconds()/60)
-            bisect.insort(self.departures[transport['number']], diff)
+            for event in data['stopEvents']:
+                # Try to get the estimated departure time and if it is
+                # not present, then get the planned departure time
+                dpt = event.get('departureTimeEstimated', event.get('departureTimePlanned'))
+                dpt_utc = dt.datetime.strptime(dpt, '%Y-%m-%dT%H:%M:%SZ')
+                transport = event.get('transportation')
+                diff = round((dpt_utc.replace(tzinfo=utc_tz) - dt.datetime.now(pytz.utc)).total_seconds()/60)
+                bisect.insort(self.departures[transport['number']], diff)
+        else:
+            print(f'Error querying the API!!')
 
     def query(self):
         self.query_departures()
