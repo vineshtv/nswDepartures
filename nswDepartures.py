@@ -1,6 +1,7 @@
 import sys
 import os
 import requests
+import argparse
 import datetime as dt
 from dateutil import tz
 import pytz
@@ -20,11 +21,11 @@ stopid = '206511' #Wollstonecraft bustop near the railway station
 
 
 class QueryNswDepartures(object):
-    def __init__(self):
+    def __init__(self, stop_id):
         self.api_key = os.environ.get('NSW_API_KEY')
         self.api_base_url = 'https://api.transport.nsw.gov.au/v1/tp/'
         self.api_call = 'departure_mon'
-        self.stopid = '200064'  # By default queries the bustop at central
+        self.stopid = stop_id  # '200064'  # By default queries the bustop at central
         self.stop_name = ''
         self.params = {
             'outputFormat': 'rapidJSON',
@@ -90,7 +91,12 @@ class QueryNswDepartures(object):
 
 
 if __name__ == "__main__":
-    q = QueryNswDepartures()
-    if len(sys.argv) == 2:
-        q.stopid = sys.argv[1]
+    #Argparse
+    parser = argparse.ArgumentParser(description='Query the nsw open data API to get departure timings for a stop')
+
+    parser.add_argument('--stop', '-s', help='Stop ID. (default:200064)', default='200064')
+    args=parser.parse_args()
+
+    q = QueryNswDepartures(args.stop)
+
     q.query()
